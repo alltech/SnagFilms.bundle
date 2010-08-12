@@ -206,10 +206,10 @@ def Search(sender, query):
 # Extracts the rtmp player and clip from the AMF proxy and redirects
 def PlayVideo(sender, pageUrl):
     response = HTTP.Request(pageUrl)
-    Log("PageURL:"+pageUrl)
+    response = re.sub("\/\*.+?\*\/", "", response, re.DOTALL)
 
-    playerId = re.findall("'playerid':'([0-9]+)'", response)[-1]
-    videoId = re.findall("'videoid':'([0-9]+)'", response)[-1]
+    playerId = re.findall("'playerid':'([0-9]+)'", response)[0]
+    videoId = re.findall("'videoid':'([0-9]+)'", response)[0]
     Log("PlayerID:"+playerId+" VideoID:"+videoId)
 
     rtmp = AmfRequest(playerId, videoId, 'http://www.snagfilms.com/')
