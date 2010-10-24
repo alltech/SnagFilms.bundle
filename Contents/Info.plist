@@ -20,11 +20,11 @@
 	<string>MacOSX,iOS</string>
 	<key>PlexFrameworkVersion</key>
 	<string>2</string>
-	<key>PlexPluginDebug</key>
-	<string>1</string>
 	<key>PlexPluginMode</key>
 	<string>AlwaysOn</string>
-	<key>PlexPluginCodePolicy</key>
-	<string>Elevated</string>
+	<key>PlexMediaContainer</key>
+	<array>
+		<string>Flash</string>
+	</array>
 </dict>
 </plist>

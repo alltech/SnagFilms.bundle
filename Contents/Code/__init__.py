@@ -3,8 +3,6 @@ import re, string, datetime
 NAMESPACE = {'media':'http://search.yahoo.com/mrss/'}
 VIDEO_PREFIX = "/video/snagfilms"
 
-#AMF_PROXY_URL = "http://www.plexapp.com/proxy/BrightcoveAmfProxy.cgi?playerId=%s&videoId=%s"
-
 SEARCH_URL= "http://www.snagfilms.com/films"
 TOPICS_URL = "http://www.snagfilms.com/films/browse/topic/"
 CHANNELS_URL = "http://www.snagfilms.com/films/browse/channel/"
@@ -18,9 +16,9 @@ RECENT_ADDITIONS_FEED = RSS_BASE_URL + "/SnagFilmsRecentAdditions?format=xml"
 
 ####################################################################################################
 def Start():
-  Plugin.AddPrefixHandler(VIDEO_PREFIX, MainMenu, "SnagFilms", "icon-default.png", "art-default.png")
+  Plugin.AddPrefixHandler(VIDEO_PREFIX, MainMenu, "SnagFilms", "icon-default.png", "art-default.jpg")
   Plugin.AddViewGroup("Details", viewMode="InfoList", mediaType="items")
-  MediaContainer.art = R('art-default.png')
+  MediaContainer.art = R('art-default.jpg')
   MediaContainer.title1 = 'SnagFilms'
   DirectoryItem.thumb = R("icon-default.png")
   
@@ -35,7 +33,7 @@ def MainMenu():
     dir.Append(Function(DirectoryItem(Topics, title="Topics")))
     dir.Append(Function(DirectoryItem(Channels, title="Channels")))
     dir.Append(Function(DirectoryItem(AllFilms, title="All Films")))
-    dir.Append(Function(InputDirectoryItem(Search, title="Search ...", thumb=R("search.png"), prompt="Search for films")))
+    dir.Append(Function(InputDirectoryItem(Search, title="Search ...", thumb=R("icon-search.png"), prompt="Search for films")))
     return dir
     
 # Extract details from the RSS feeds
@@ -190,9 +188,9 @@ def Search(sender, query):
     queryData['where'] = 'all'
     queryData['site_id'] = '1'
     queryData['keywords'] = query
-    response = HTTP.Request(SEARCH_URL, queryData)
-    if response != None:
-        items = HTML.ElementFromString(response).xpath('//div[@class="module_content"]')
+
+    try:
+        items = HTML.ElementFromString(SEARCH_URL, queryData).xpath('//div[@class="module_content"]')
         for item in items:
             if len(item.xpath('./div[@class="fleft"]/a')) > 0:
                  title = item.xpath("./div[@class='fleft']/a")[0].get('title')
@@ -200,11 +198,14 @@ def Search(sender, query):
                  image = item.xpath("./div[@class='fleft']/a/img")[0].get('src')
                  summary = item.xpath("./div[@class='text']")[0].text
                  dir.Append(Function(VideoItem(PlayVideo, title=title, summary=summary, thumb=image, subtitle=None), pageUrl=pageUrl))
+    except:
+        pass
+
     return dir
-    
+
 # Extracts the rtmp player and clip from the AMF proxy and redirects
 def PlayVideo(sender, pageUrl):
-    response = HTTP.Request(pageUrl)
+    response = HTTP.Request(pageUrl).content
     response = re.sub("\/\*.+?\*\/", "", str(response), re.DOTALL)
 
     playerId = re.findall("'playerid':'([0-9]+)'", response)[0]
@@ -212,9 +213,6 @@ def PlayVideo(sender, pageUrl):
     Log("PlayerID:"+playerId+" VideoID:"+videoId)
 
     rtmp = AmfRequest(playerId, videoId, 'http://www.snagfilms.com/')
-    #proxyUrl = AMF_PROXY_URL % (playerId, videoId)
-    #Log("ProxyUrl:"+proxyUrl)
-    #rtmp = XML.ElementFromURL(proxyUrl).xpath('/amfProxy/result/message')[0].text
     tokens = rtmp.split('&')
     return Redirect(RTMPVideoItem(tokens[0], tokens[1]))
 
