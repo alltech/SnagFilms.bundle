@@ -1,6 +1,4 @@
-from PMS import *
-import re, string, datetime, pyamf
-from pyamf.remoting.client import RemotingService
+import re, string, datetime
 
 NAMESPACE = {'media':'http://search.yahoo.com/mrss/'}
 VIDEO_PREFIX = "/video/snagfilms"
@@ -18,7 +16,6 @@ TOP_RATED_FEED = RSS_BASE_URL + "/SnagFilmsUserFavorites?format=xml"
 MOST_DISCUSSED_FEED = RSS_BASE_URL + "/SnagFilmsMostDiscussed?format=xml"
 RECENT_ADDITIONS_FEED = RSS_BASE_URL + "/SnagFilmsRecentAdditions?format=xml"
 
-
 ####################################################################################################
 def Start():
   Plugin.AddPrefixHandler(VIDEO_PREFIX, MainMenu, "SnagFilms", "icon-default.png", "art-default.png")
@@ -31,10 +28,10 @@ def Start():
 #################################
 def MainMenu():
     dir = MediaContainer(mediaType='video')  
-    dir.Append(Function(DirectoryItem(RssFeed, title="Recent Additions"), url=RECENT_ADDITIONS_FEED))
-    dir.Append(Function(DirectoryItem(RssFeed, title="Most Popular"), url=MOST_POPULAR_FEED))
-    dir.Append(Function(DirectoryItem(RssFeed, title="Top Rated"), url=TOP_RATED_FEED))
-    dir.Append(Function(DirectoryItem(RssFeed, title="Most Discussed"), url=MOST_DISCUSSED_FEED))
+    dir.Append(Function(DirectoryItem(SnagFeed, title="Recent Additions"), url=RECENT_ADDITIONS_FEED))
+    dir.Append(Function(DirectoryItem(SnagFeed, title="Most Popular"), url=MOST_POPULAR_FEED))
+    dir.Append(Function(DirectoryItem(SnagFeed, title="Top Rated"), url=TOP_RATED_FEED))
+    dir.Append(Function(DirectoryItem(SnagFeed, title="Most Discussed"), url=MOST_DISCUSSED_FEED))
     dir.Append(Function(DirectoryItem(Topics, title="Topics")))
     dir.Append(Function(DirectoryItem(Channels, title="Channels")))
     dir.Append(Function(DirectoryItem(AllFilms, title="All Films")))
@@ -42,9 +39,11 @@ def MainMenu():
     return dir
     
 # Extract details from the RSS feeds
-def RssFeed(sender, url):
+def SnagFeed(sender, url):
   dir = MediaContainer(viewGroup='Details', title2=sender.itemTitle)
   feed = RSS.FeedFromURL(url)
+  Log("Feed URL:"+str(url))
+  Log("Feed list:"+str(len(feed)))
   for item in feed['items']: 
       published = Datetime.ParseDate(item.updated).strftime('%a %b %d, %Y')
       summary = String.StripTags(item.description)
@@ -56,28 +55,28 @@ def RssFeed(sender, url):
 # Alphabetical list
 def AllFilms(sender):
     dir = MediaContainer(title2=sender.itemTitle)
-    for letter in string.uppercase:
+    for letter in list(string.uppercase):
         dir.Append(Function(DirectoryItem(AlphabeticalFilms, title=letter), letter=letter, page=0))
     return dir
     
 def AlphabeticalFilms(sender, letter, page):
     url = AZ_URL % (letter, page)
     dir = MediaContainer(title2=letter, replaceParent=True)
-    for item in XML.ElementFromURL(url, True).xpath('//div[@class="module_content"]/div'):
+    for item in HTML.ElementFromURL(url).xpath('//div[@class="module_content"]/div'):
         if len(item.xpath('./div/a')) > 0:
             title = item.xpath("./div[@class='fleft']/a")[0].get('title')
             pageUrl = item.xpath("./div[@class='fleft']/a")[0].get('href')
             image = item.xpath("./div[@class='fleft']/a/img")[0].get('src')
             summary = item.xpath("./div[@class='text']")[0].text
             dir.Append(Function(VideoItem(PlayVideo, title=title, summary=summary, thumb=image, subtitle=None), pageUrl=pageUrl))
-    if len(XML.ElementFromURL(url, True).xpath('//a[@href and text()="Next"]')) > 0:
+    if len(HTML.ElementFromURL(url).xpath('//a[@href and text()="Next"]')) > 0:
         dir.Append(Function(DirectoryItem(AlphabeticalFilms, title="More ..."), letter=letter, page=page+20))
     return dir
     
 # List of Topics 
 def Topics(sender):
     dir = MediaContainer(title2=sender.itemTitle)
-    for item in XML.ElementFromURL(TOPICS_URL, True).xpath('//div[@id="browse_content"]/div/div[@class="module_content"]'):
+    for item in HTML.ElementFromURL(TOPICS_URL).xpath('//div[@id="browse_content"]/div/div[@class="module_content"]'):
         title = item.xpath('./h1/a')[0].text
         topicUrl = item.xpath('./h1/a')[0].get('href')
         thumb = item.xpath('.//div[@class="browse_poster_list"]/div/a/img')[0].get('src')
@@ -100,7 +99,7 @@ def PopularTopicFilms(sender, url):
 
 def ParseFixedModule(sender, url, number):
     dir = MediaContainer(viewGroup='Details', title2=sender.itemTitle)
-    module = XML.ElementFromURL(url, True).xpath('//div[@class="module"]')[number]
+    module = HTML.ElementFromURL(url).xpath('//div[@class="module"]')[number]
     for item in module.xpath('.//div'):
         if len(item.xpath('./div[@class="fleft"]/a')) > 0:
             title = item.xpath("./div[@class='fleft']/a")[0].get('title')
@@ -113,7 +112,7 @@ def ParseFixedModule(sender, url, number):
 def AllTopicFilms(sender, url, page=0):
     dir = MediaContainer(viewGroup='Details', title2=sender.itemTitle)
     pagedUrl = url + "/P%d" % page
-    items = XML.ElementFromURL(pagedUrl, True).xpath('//div[@class="module_content"]/div')
+    items = HTML.ElementFromURL(pagedUrl).xpath('//div[@class="module_content"]/div')
     for item in items:
         if len(item.xpath('./div/a')) > 0:
             title = item.xpath("./div[@class='fleft']/a")[0].get('title')
@@ -121,7 +120,7 @@ def AllTopicFilms(sender, url, page=0):
             image = item.xpath("./div[@class='fleft']/a/img")[0].get('src')
             summary = item.xpath("./div[@class='text']")[0].text
             dir.Append(Function(VideoItem(PlayVideo, title=title, summary=summary, thumb=image, subtitle=None), pageUrl=pageUrl))
-    if len(XML.ElementFromURL(pagedUrl, True).xpath('//a[@href and text()="Next Page"]')) > 0:
+    if len(HTML.ElementFromURL(pagedUrl).xpath('//a[@href and text()="Next Page"]')) > 0:
         dir.Append(Function(DirectoryItem(AllTopicFilms, title="More ..."), url=url, page=page+15))
     return dir
 
@@ -129,7 +128,7 @@ def AllTopicFilms(sender, url, page=0):
 # List of Channels 
 def Channels(sender):
     dir = MediaContainer(title2=sender.itemTitle)
-    for item in XML.ElementFromURL(CHANNELS_URL, True).xpath('//div[@id="browse_content"]/div/div[@class="module_content"]'):
+    for item in HTML.ElementFromURL(CHANNELS_URL).xpath('//div[@id="browse_content"]/div/div[@class="module_content"]'):
         title = item.xpath('./h1/a')[0].text
         channelUrl = item.xpath('./h1/a')[0].get('href')
         thumb = item.xpath('.//div[@class="browse_poster_list"]/div/a/img')[0].get('src')
@@ -147,7 +146,7 @@ def ChannelSections(sender, url, channel):
   return dir
 
 def HasAlphabeticalContent(url):
-    items = XML.ElementFromURL(url, True).xpath('//div[@class="module_content"]/div')
+    items = HTML.ElementFromURL(url).xpath('//div[@class="module_content"]/div')
     for item in items:
         if len(item.xpath('./div/a')) > 0:
             return True
@@ -155,7 +154,7 @@ def HasAlphabeticalContent(url):
  
 def AllChannelFilms(sender, url):
     dir = MediaContainer(viewGroup='Details', title2=sender.itemTitle)
-    items = XML.ElementFromURL(url, True).xpath('//div[@class="module_content"]/div')
+    items = HTML.ElementFromURL(url).xpath('//div[@class="module_content"]/div')
     for item in items:
         if len(item.xpath('./div/a')) > 0:
             title = item.xpath("./div[@class='fleft']/a")[0].get('title')
@@ -168,7 +167,7 @@ def AllChannelFilms(sender, url):
 # Those contained in the scrolling module
 def FeaturedFilms(sender, url):
   dir = MediaContainer(viewGroup='Details', title2=sender.itemTitle)
-  for item in XML.ElementFromURL(url, True).xpath('//div[@class="dl_container"]'):
+  for item in HTML.ElementFromURL(url).xpath('//div[@class="dl_container"]'):
         pageUrl = item.xpath("./div[@class='dl_text']//span[@class='title']/a")[0].get('href')
         title = item.xpath("./div[@class='dl_text']//span[@class='title']/a")[0].text
         image = item.xpath("./div[@class='dl_image']/a/img")[0].get('src')
@@ -193,9 +192,9 @@ def Search(sender, query):
     queryData['keywords'] = query
     response = HTTP.Request(SEARCH_URL, queryData)
     if response != None:
-        items = XML.ElementFromString(response, True).xpath('//div[@class="module_content"]')
+        items = HTML.ElementFromString(response).xpath('//div[@class="module_content"]')
         for item in items:
-            if len(item.xpath('./div/a')) > 0:
+            if len(item.xpath('./div[@class="fleft"]/a')) > 0:
                  title = item.xpath("./div[@class='fleft']/a")[0].get('title')
                  pageUrl = item.xpath("./div[@class='fleft']/a")[0].get('href')
                  image = item.xpath("./div[@class='fleft']/a/img")[0].get('src')
@@ -206,7 +205,7 @@ def Search(sender, query):
 # Extracts the rtmp player and clip from the AMF proxy and redirects
 def PlayVideo(sender, pageUrl):
     response = HTTP.Request(pageUrl)
-    response = re.sub("\/\*.+?\*\/", "", response, re.DOTALL)
+    response = re.sub("\/\*.+?\*\/", "", str(response), re.DOTALL)
 
     playerId = re.findall("'playerid':'([0-9]+)'", response)[0]
     videoId = re.findall("'videoid':'([0-9]+)'", response)[0]
@@ -241,11 +240,11 @@ class ViewerExperienceRequest(object):
     self.URL = url
 
 def AmfRequest(playerId, videoId, url):
-  client = RemotingService('http://c.brightcove.com/services/messagebroker/amf', user_agent='', client_type=3)
+  client = AMF.RemotingService('http://c.brightcove.com/services/messagebroker/amf', user_agent='', client_type=3)
   service = client.getService('com.brightcove.experience.ExperienceRuntimeFacade')
 
-  pyamf.register_class(ContentOverride, 'com.brightcove.experience.ContentOverride')
-  pyamf.register_class(ViewerExperienceRequest, 'com.brightcove.experience.ViewerExperienceRequest')
+  AMF.RegisterClass(ContentOverride, 'com.brightcove.experience.ContentOverride')
+  AMF.RegisterClass(ViewerExperienceRequest, 'com.brightcove.experience.ViewerExperienceRequest')
 
   video = ContentOverride(videoId)
   experience = ViewerExperienceRequest(playerId, video, url)
