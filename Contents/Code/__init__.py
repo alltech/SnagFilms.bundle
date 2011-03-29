@@ -192,9 +192,13 @@ def Search(sender, query):
     queryData['where'] = 'all'
     queryData['site_id'] = '1'
     queryData['keywords'] = query
-
-    try:
-        items = HTML.ElementFromString(SEARCH_URL, queryData).xpath('//div[@class="module_content"]')
+    response = HTTP.Request(SEARCH_URL, queryData)
+    if response == None:
+    	return MessageContainer("No results", "Search for "+query+" returned no results")
+    else:
+        items = HTML.ElementFromString(response).xpath('//div[@class="module_content"]')
+        if len(items) == 0:
+        	return MessageContainer("No results", "Search for "+query+" returned no results")
         for item in items:
             if len(item.xpath('./div[@class="fleft"]/a')) > 0:
                  title = item.xpath("./div[@class='fleft']/a")[0].get('title')
@@ -202,9 +206,6 @@ def Search(sender, query):
                  image = item.xpath("./div[@class='fleft']/a/img")[0].get('src')
                  summary = item.xpath("./div[@class='text']")[0].text
                  dir.Append(Function(VideoItem(PlayVideo, title=title, summary=summary, thumb=image, subtitle=None), pageUrl=pageUrl))
-    except:
-        pass
-
     return dir
 
 # Extracts the rtmp player and clip from the AMF proxy and redirects
