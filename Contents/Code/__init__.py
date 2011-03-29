@@ -92,13 +92,14 @@ def TopicSections(sender, url, topic):
   return dir
   
 def NewestTopicFilms(sender, url):
-    return ParseFixedModule(sender, url, 3)
+    return ParseFixedModule(sender, url, 2)
 
 def PopularTopicFilms(sender, url):
-    return ParseFixedModule(sender, url, 4)
+    return ParseFixedModule(sender, url, 3)
 
 def ParseFixedModule(sender, url, number):
     dir = MediaContainer(viewGroup='Details', title2=sender.itemTitle)
+    Log("Fixed module URL:"+url)
     module = HTML.ElementFromURL(url).xpath('//div[@class="module"]')[number]
     for item in module.xpath('.//div'):
         if len(item.xpath('./div[@class="fleft"]/a')) > 0:
@@ -138,9 +139,9 @@ def Channels(sender):
 def ChannelSections(sender, url, channel):
   dir = MediaContainer(title2=sender.itemTitle)
   dir.Append(Function(DirectoryItem(FeaturedFilms, title="Featured "+channel+" Films"), url=url))
-  dir.Append(Function(DirectoryItem(FeaturedFilms, title="Newest "+channel+" Films"), url=url+"/newest"))
-  dir.Append(Function(DirectoryItem(FeaturedFilms, title="Top Rated "+channel+" Films"), url=url+"/faves"))
-  dir.Append(Function(DirectoryItem(FeaturedFilms, title="Most Discussed "+channel+" Films"), url=url+"/discussed"))
+  dir.Append(Function(DirectoryItem(FeaturedFilms, title="Newest "+channel+" Films"), url=url+"newest"))
+  dir.Append(Function(DirectoryItem(FeaturedFilms, title="Top Rated "+channel+" Films"), url=url+"faves"))
+  dir.Append(Function(DirectoryItem(FeaturedFilms, title="Most Discussed "+channel+" Films"), url=url+"discussed"))
   if HasAlphabeticalContent(url+"a-z"):
       dir.Append(Function(DirectoryItem(AllChannelFilms, title="All "+channel+" Films"), url=url+"a-z"))
   return dir
@@ -167,7 +168,10 @@ def AllChannelFilms(sender, url):
 # Those contained in the scrolling module
 def FeaturedFilms(sender, url):
   dir = MediaContainer(viewGroup='Details', title2=sender.itemTitle)
-  for item in HTML.ElementFromURL(url).xpath('//div[@class="dl_container"]'):
+  content = HTML.ElementFromURL(url).xpath('//div[@class="dl_container"]')
+  if len(content) == 0:
+  	return MessageContainer("No content", "No content available for "+sender.itemTitle)
+  for item in content:
         pageUrl = item.xpath("./div[@class='dl_text']//span[@class='title']/a")[0].get('href')
         title = item.xpath("./div[@class='dl_text']//span[@class='title']/a")[0].text
         image = item.xpath("./div[@class='dl_image']/a/img")[0].get('src')
