@@ -14,18 +14,26 @@ TOP_RATED_FEED = RSS_BASE_URL + "/SnagFilmsUserFavorites?format=xml"
 MOST_DISCUSSED_FEED = RSS_BASE_URL + "/SnagFilmsMostDiscussed?format=xml"
 RECENT_ADDITIONS_FEED = RSS_BASE_URL + "/SnagFilmsRecentAdditions?format=xml"
 
+ART = 'art-default.jpg'
+ICON = 'icon-default.png'
+
 ####################################################################################################
 def Start():
-  Plugin.AddPrefixHandler(VIDEO_PREFIX, MainMenu, "SnagFilms", "icon-default.png", "art-default.jpg")
-  Plugin.AddViewGroup("Details", viewMode="InfoList", mediaType="items")
-  MediaContainer.art = R('art-default.jpg')
-  MediaContainer.title1 = 'SnagFilms'
-  DirectoryItem.thumb = R("icon-default.png")
-  
+  Plugin.AddPrefixHandler(VIDEO_PREFIX, MainMenu, "SnagFilms", ICON, ART)
+  Plugin.AddViewGroup("InfoList", viewMode="InfoList", mediaType="items")
+  Plugin.AddViewGroup("List", viewMode="List", mediaType="items")
+
+  MediaContainer.art = R(ART)
+  MediaContainer.title1 = "SnagFilms"
+  MediaContainer.viewGroup = "InfoList"
+  DirectoryItem.thumb = R(ICON)
+
+  HTTP.Headers['User-Agent'] = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.16) Gecko/20110319 Firefox/3.6.16"
+  HTTP.CacheTime = CACHE_1HOUR
 
 #################################
 def MainMenu():
-    dir = MediaContainer(mediaType='video')  
+    dir = MediaContainer(viewGroup='List')
     dir.Append(Function(DirectoryItem(SnagFeed, title="Recent Additions"), url=RECENT_ADDITIONS_FEED))
     dir.Append(Function(DirectoryItem(SnagFeed, title="Most Popular"), url=MOST_POPULAR_FEED))
     dir.Append(Function(DirectoryItem(SnagFeed, title="Top Rated"), url=TOP_RATED_FEED))
@@ -38,7 +46,7 @@ def MainMenu():
     
 # Extract details from the RSS feeds
 def SnagFeed(sender, url):
-  dir = MediaContainer(viewGroup='Details', title2=sender.itemTitle)
+  dir = MediaContainer(title2=sender.itemTitle)
   feed = RSS.FeedFromURL(url)
   Log("Feed URL:"+str(url))
   Log("Feed list:"+str(len(feed)))
@@ -47,12 +55,12 @@ def SnagFeed(sender, url):
       summary = String.StripTags(item.description)
       thumb = item.media_thumbnail[0]['url']
       pageUrl = item.link
-      dir.Append(Function(VideoItem(PlayVideo, title=item.title, summary=summary, thumb=thumb, subtitle=published), pageUrl=pageUrl))
+      dir.Append(Function(VideoItem(PlayVideo, title=item.title, summary=summary, thumb=Function(GetThumb, url=thumb), subtitle=published), pageUrl=pageUrl))
   return dir
   
 # Alphabetical list
 def AllFilms(sender):
-    dir = MediaContainer(title2=sender.itemTitle)
+    dir = MediaContainer(viewGroup='List', title2=sender.itemTitle)
     for letter in list(string.uppercase):
         dir.Append(Function(DirectoryItem(AlphabeticalFilms, title=letter), letter=letter, page=0))
     return dir
@@ -66,23 +74,23 @@ def AlphabeticalFilms(sender, letter, page):
             pageUrl = item.xpath("./div[@class='fleft']/a")[0].get('href')
             image = item.xpath("./div[@class='fleft']/a/img")[0].get('src')
             summary = item.xpath("./div[@class='text']")[0].text
-            dir.Append(Function(VideoItem(PlayVideo, title=title, summary=summary, thumb=image, subtitle=None), pageUrl=pageUrl))
+            dir.Append(Function(VideoItem(PlayVideo, title=title, summary=summary, thumb=Function(GetThumb, url=image), subtitle=None), pageUrl=pageUrl))
     if len(HTML.ElementFromURL(url).xpath('//a[@href and text()="Next"]')) > 0:
         dir.Append(Function(DirectoryItem(AlphabeticalFilms, title="More ..."), letter=letter, page=page+20))
     return dir
     
 # List of Topics 
 def Topics(sender):
-    dir = MediaContainer(title2=sender.itemTitle)
+    dir = MediaContainer(viewGroup='List', title2=sender.itemTitle)
     for item in HTML.ElementFromURL(TOPICS_URL).xpath('//div[@id="browse_content"]/div/div[@class="module_content"]'):
         title = item.xpath('./h1/a')[0].text
         topicUrl = item.xpath('./h1/a')[0].get('href')
         thumb = item.xpath('.//div[@class="browse_poster_list"]/div/a/img')[0].get('src')
-        dir.Append(Function(DirectoryItem(TopicSections, title=title, thumb=thumb), url=topicUrl, topic=title))
+        dir.Append(Function(DirectoryItem(TopicSections, title=title, thumb=Function(GetThumb, url=thumb)), url=topicUrl, topic=title))
     return dir
   
 def TopicSections(sender, url, topic):
-  dir = MediaContainer(title2=sender.itemTitle)
+  dir = MediaContainer(viewGroup='List', title2=sender.itemTitle)
   dir.Append(Function(DirectoryItem(FeaturedFilms, title="Featured "+topic+" Films"), url=url))
   dir.Append(Function(DirectoryItem(NewestTopicFilms, title="Newest "+topic+" Films"), url=url))
   dir.Append(Function(DirectoryItem(PopularTopicFilms, title="Popular "+topic+" Films"), url=url))
@@ -96,7 +104,7 @@ def PopularTopicFilms(sender, url):
     return ParseFixedModule(sender, url, 3)
 
 def ParseFixedModule(sender, url, number):
-    dir = MediaContainer(viewGroup='Details', title2=sender.itemTitle)
+    dir = MediaContainer(title2=sender.itemTitle)
     Log("Fixed module URL:"+url)
     module = HTML.ElementFromURL(url).xpath('//div[@class="module"]')[number]
     for item in module.xpath('.//div'):
@@ -105,11 +113,11 @@ def ParseFixedModule(sender, url, number):
             pageUrl = item.xpath("./div[@class='fleft']/a")[0].get('href')
             image = item.xpath("./div[@class='fleft']/a/img")[0].get('src')
             summary = item.xpath("./div[@class='text']")[0].text
-            dir.Append(Function(VideoItem(PlayVideo, title=title, summary=summary, thumb=image, subtitle=None), pageUrl=pageUrl))
+            dir.Append(Function(VideoItem(PlayVideo, title=title, summary=summary, thumb=Function(GetThumb, url=image), subtitle=None), pageUrl=pageUrl))
     return dir
 
 def AllTopicFilms(sender, url, page=0):
-    dir = MediaContainer(viewGroup='Details', title2=sender.itemTitle)
+    dir = MediaContainer(title2=sender.itemTitle)
     pagedUrl = url + "/P%d" % page
     items = HTML.ElementFromURL(pagedUrl).xpath('//div[@class="module_content"]/div')
     for item in items:
@@ -118,7 +126,7 @@ def AllTopicFilms(sender, url, page=0):
             pageUrl = item.xpath("./div[@class='fleft']/a")[0].get('href')
             image = item.xpath("./div[@class='fleft']/a/img")[0].get('src')
             summary = item.xpath("./div[@class='text']")[0].text
-            dir.Append(Function(VideoItem(PlayVideo, title=title, summary=summary, thumb=image, subtitle=None), pageUrl=pageUrl))
+            dir.Append(Function(VideoItem(PlayVideo, title=title, summary=summary, thumb=Function(GetThumb, url=image), subtitle=None), pageUrl=pageUrl))
     if len(HTML.ElementFromURL(pagedUrl).xpath('//a[@href and text()="Next Page"]')) > 0:
         dir.Append(Function(DirectoryItem(AllTopicFilms, title="More ..."), url=url, page=page+15))
     return dir
@@ -126,16 +134,16 @@ def AllTopicFilms(sender, url, page=0):
   
 # List of Channels 
 def Channels(sender):
-    dir = MediaContainer(title2=sender.itemTitle)
+    dir = MediaContainer(viewGroup='List', title2=sender.itemTitle)
     for item in HTML.ElementFromURL(CHANNELS_URL).xpath('//div[@id="browse_content"]/div/div[@class="module_content"]'):
         title = item.xpath('./h1/a')[0].text
         channelUrl = item.xpath('./h1/a')[0].get('href')
         thumb = item.xpath('.//div[@class="browse_poster_list"]/div/a/img')[0].get('src')
-        dir.Append(Function(DirectoryItem(ChannelSections, title=title, thumb=thumb), url=channelUrl, channel=title))
+        dir.Append(Function(DirectoryItem(ChannelSections, title=title, thumb=Function(GetThumb, url=thumb)), url=channelUrl, channel=title))
     return dir
   
 def ChannelSections(sender, url, channel):
-  dir = MediaContainer(title2=sender.itemTitle)
+  dir = MediaContainer(viewGroup='List', title2=sender.itemTitle)
   dir.Append(Function(DirectoryItem(FeaturedFilms, title="Featured "+channel+" Films"), url=url))
   dir.Append(Function(DirectoryItem(FeaturedFilms, title="Newest "+channel+" Films"), url=url+"newest"))
   dir.Append(Function(DirectoryItem(FeaturedFilms, title="Top Rated "+channel+" Films"), url=url+"faves"))
@@ -152,7 +160,7 @@ def HasAlphabeticalContent(url):
     return False
  
 def AllChannelFilms(sender, url):
-    dir = MediaContainer(viewGroup='Details', title2=sender.itemTitle)
+    dir = MediaContainer(title2=sender.itemTitle)
     items = HTML.ElementFromURL(url).xpath('//div[@class="module_content"]/div')
     for item in items:
         if len(item.xpath('./div/a')) > 0:
@@ -160,12 +168,12 @@ def AllChannelFilms(sender, url):
             pageUrl = item.xpath("./div[@class='fleft']/a")[0].get('href')
             image = item.xpath("./div[@class='fleft']/a/img")[0].get('src')
             summary = item.xpath("./div[@class='text']")[0].text
-            dir.Append(Function(VideoItem(PlayVideo, title=title, summary=summary, thumb=image, subtitle=None), pageUrl=pageUrl))
+            dir.Append(Function(VideoItem(PlayVideo, title=title, summary=summary, thumb=Function(GetThumb, url=image), subtitle=None), pageUrl=pageUrl))
     return dir
 
 # Those contained in the scrolling module
 def FeaturedFilms(sender, url):
-  dir = MediaContainer(viewGroup='Details', title2=sender.itemTitle)
+  dir = MediaContainer(title2=sender.itemTitle)
   content = HTML.ElementFromURL(url).xpath('//div[@class="dl_container"]')
   if len(content) == 0:
   	return MessageContainer("No content", "No content available for "+sender.itemTitle)
@@ -174,12 +182,12 @@ def FeaturedFilms(sender, url):
         title = item.xpath("./div[@class='dl_text']//span[@class='title']/a")[0].text
         image = item.xpath("./div[@class='dl_image']/a/img")[0].get('src')
         summary = item.xpath("./div[@class='dl_text']//span[@class='txt']")[0].text
-        dir.Append(Function(VideoItem(PlayVideo, title=title, summary=summary, thumb=image, subtitle=None), pageUrl=pageUrl))
+        dir.Append(Function(VideoItem(PlayVideo, title=title, summary=summary, thumb=Function(GetThumb, url=image), subtitle=None), pageUrl=pageUrl))
   return dir
   
 # Search is a POST driven form with lots of hidden parameters
 def Search(sender, query):
-    dir = MediaContainer(viewGroup='Details', title2=sender.itemTitle)
+    dir = MediaContainer(title2=sender.itemTitle)
     queryData = dict()
     queryData['XID'] = ''
     queryData['ACT'] = '19'
@@ -205,7 +213,7 @@ def Search(sender, query):
                  pageUrl = item.xpath("./div[@class='fleft']/a")[0].get('href')
                  image = item.xpath("./div[@class='fleft']/a/img")[0].get('src')
                  summary = item.xpath("./div[@class='text']")[0].text
-                 dir.Append(Function(VideoItem(PlayVideo, title=title, summary=summary, thumb=image, subtitle=None), pageUrl=pageUrl))
+                 dir.Append(Function(VideoItem(PlayVideo, title=title, summary=summary, thumb=Function(GetThumb, url=image), subtitle=None), pageUrl=pageUrl))
     return dir
 
 # Extracts the rtmp player and clip from the AMF proxy and redirects
@@ -221,6 +229,12 @@ def PlayVideo(sender, pageUrl):
     tokens = rtmp.split('&')
     return Redirect(RTMPVideoItem(tokens[0], tokens[1]))
 
+def GetThumb(url):
+  try:
+    image = HTTP.Request(url, cacheTime=CACHE_1WEEK).content
+    return DataObject(image, 'image/jpeg')
+  except:
+    return Redirect(R(ICON))
 
 ####################################################################################################
 class ContentOverride(object):
@@ -256,4 +270,3 @@ def AmfRequest(playerId, videoId, url):
 
   flvUrl = result['programmedContent']['videoPlayer']['mediaDTO']['FLVFullLengthURL']
   return flvUrl
-   
