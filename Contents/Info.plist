@@ -26,7 +26,5 @@
 	</array>
 	<key>PlexPluginMode</key>
 	<string>AlwaysOn</string>
-	<key>PlexPluginCodePolicy</key>
-	<string>Elevated</string>
 </dict>
 </plist>
