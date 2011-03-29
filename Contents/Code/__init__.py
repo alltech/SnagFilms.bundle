@@ -195,8 +195,12 @@ def Search(sender, query):
     queryData['site_id'] = '1'
     queryData['keywords'] = query
     response = HTTP.Request(SEARCH_URL, queryData)
-    if response != None:
+    if response == None:
+    	return MessageContainer("No results", "Search for "+query+" returned no results")
+    else:
         items = HTML.ElementFromString(response).xpath('//div[@class="module_content"]')
+        if len(items) == 0:
+        	return MessageContainer("No results", "Search for "+query+" returned no results")
         for item in items:
             if len(item.xpath('./div[@class="fleft"]/a')) > 0:
                  title = item.xpath("./div[@class='fleft']/a")[0].get('title')
