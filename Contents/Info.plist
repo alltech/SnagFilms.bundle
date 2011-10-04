@@ -33,5 +33,10 @@
 	</dict>
 	<key>PlexPluginMode</key>
 	<string>AlwaysOn</string>
+	<key>PlexSearchServices</key>
+    <dict>
+        <key>SnagFilms</key>
+        <string>com.plexapp.plugins.snagfilms</string>
+    </dict>
 </dict>
 </plist>
