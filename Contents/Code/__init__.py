@@ -15,28 +15,28 @@ ICON = 'icon-default.png'
 
 ####################################################################################################
 def Start():
-  Plugin.AddPrefixHandler(VIDEO_PREFIX, MainMenu, TITLE, ICON, ART)
-  Plugin.AddViewGroup("InfoList", viewMode = "InfoList", mediaType = "items")
-  Plugin.AddViewGroup("List", viewMode = "List", mediaType = "items")
+    Plugin.AddPrefixHandler(VIDEO_PREFIX, MainMenu, TITLE, ICON, ART)
+    Plugin.AddViewGroup("InfoList", viewMode = "InfoList", mediaType = "items")
+    Plugin.AddViewGroup("List", viewMode = "List", mediaType = "items")
 
-  # Set the default ObjectContainer attributes
-  ObjectContainer.title1 = TITLE
-  ObjectContainer.view_group = 'List'
-  ObjectContainer.art = R(ART)
+    # Set the default ObjectContainer attributes
+    ObjectContainer.title1 = TITLE
+    ObjectContainer.view_group = 'List'
+    ObjectContainer.art = R(ART)
 
-  # Default icons for DirectoryObject and VideoClipObject in case there isn't an image
-  DirectoryObject.thumb = R(ICON)
-  DirectoryObject.art = R(ART)
-  VideoClipObject.thumb = R(ICON)
-  VideoClipObject.art = R(ART)
+    # Default icons for DirectoryObject and VideoClipObject in case there isn't an image
+    DirectoryObject.thumb = R(ICON)
+    DirectoryObject.art = R(ART)
+    VideoClipObject.thumb = R(ICON)
+    VideoClipObject.art = R(ART)
 
-  HTTP.Headers['User-Agent'] = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.16) Gecko/20110319 Firefox/3.6.16"
-  HTTP.CacheTime = CACHE_1HOUR
+    HTTP.Headers['User-Agent'] = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.16) Gecko/20110319 Firefox/3.6.16"
+    HTTP.CacheTime = CACHE_1HOUR
 
 ####################################################################################################
 def MainMenu():
     oc = ObjectContainer()
-    
+
     oc.add(DirectoryObject(key = Callback(ListItems, title = "Most Liked", url = MOST_LIKED), title = "Most Liked"))
     oc.add(DirectoryObject(key = Callback(ListItems, title = "New Arrivals", url = NEW_ARIVALS), title = "New Arrivals"))
     oc.add(DirectoryObject(key = Callback(Categories, title = "Categories"), title = "Categories"))
@@ -53,11 +53,11 @@ def Categories(title):
 
     page = HTML.ElementFromURL(BASE_BROWSE)
     for category in page.xpath("//ul[@class = 'categories']/li")[1:-1]:
-    
+
         title = category.xpath(".//a")[0].get('title')
         url = BASE_URL + category.xpath(".//a")[0].get('href')
         oc.add(DirectoryObject(key = Callback(ListItems, title = title, url = url), title = title))
-    
+
     return oc
 
 ####################################################################################################
@@ -71,17 +71,17 @@ def Channels(title):
         title = channel.get('title')
         url = BASE_URL + channel.get('href')
         oc.add(DirectoryObject(key = Callback(ListItems, title = title, url = url), title = title))
-    
+
     return oc
 
 ####################################################################################################
 
 def AllFilms(title):
     oc = ObjectContainer(title2 = title)
-    
+
     for letter in list(string.uppercase):
         oc.add(DirectoryObject(key = Callback(ListItems, title = letter, url = AZ_URL % letter), title = letter))
-    
+
     return oc
 
 ####################################################################################################
@@ -106,11 +106,11 @@ def ListItems(title, url, replace_parent = False):
             duration = int(extra_dict['mins'])
             duration = duration * 60 * 1000
         except: pass
-        
+
         rating_desc = item.xpath(".//span[contains(@class, 'stars')]")[0].get('class')
         rating_dict = re.match(".*s(?P<rating>[0-5]+)", rating_desc).groupdict()
         rating = float(rating_dict['rating']) * 2
-        
+
         oc.add(VideoClipObject(
             url = pageUrl,
             title = title,
@@ -126,7 +126,7 @@ def ListItems(title, url, replace_parent = False):
     if len(next_page) > 0:
         next_url = next_page[0].xpath(".//a")[0].get('href')
         oc.add(DirectoryObject(key = Callback(ListItems, title = title, url = BASE_URL + next_url, replace_parent = True), title = "Next..."))
-    
+
     if len(oc) == 0:
         return MessageContainer(title, "No titles were found...")   
 

@@ -30,8 +30,8 @@ def Search(query):
         summary = summary,
         thumb = thumb
       ))
-                
+
     except:
       Log.Exception("Exception adding video result")
-      
+
   return c
