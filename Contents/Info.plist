@@ -22,13 +22,6 @@
 	<array>
 		<string>Flash</string>
 	</array>
-	<key>PlexClientCapabilities</key>
-	<dict>
-		<key>protocols</key>
-		<array>
-			<string>webkit</string>
-		</array>
-	</dict>
 	<key>PlexPluginMode</key>
 	<string>AlwaysOn</string>
 	<key>PlexSearchServices</key>
