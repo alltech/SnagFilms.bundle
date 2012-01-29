@@ -1,4 +1,5 @@
 import re
+import string
 
 VIDEO_PREFIX = "/video/snagfilms"
 
