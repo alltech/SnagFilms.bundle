@@ -1,7 +1,4 @@
-import re
-import string
-
-VIDEO_PREFIX = "/video/snagfilms"
+import re, string
 
 TITLE = "SnagFilms"
 BASE_URL = "http://www.snagfilms.com"
@@ -16,7 +13,7 @@ ICON = 'icon-default.png'
 
 ####################################################################################################
 def Start():
-    Plugin.AddPrefixHandler(VIDEO_PREFIX, MainMenu, TITLE, ICON, ART)
+    Plugin.AddPrefixHandler("/video/snagfilms", MainMenu, TITLE, ICON, ART)
     Plugin.AddViewGroup("InfoList", viewMode = "InfoList", mediaType = "items")
     Plugin.AddViewGroup("List", viewMode = "List", mediaType = "items")
 
@@ -31,7 +28,7 @@ def Start():
     VideoClipObject.thumb = R(ICON)
     VideoClipObject.art = R(ART)
 
-    HTTP.Headers['User-Agent'] = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.16) Gecko/20110319 Firefox/3.6.16"
+    HTTP.Headers['User-Agent'] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:9.0.1) Gecko/20100101 Firefox/9.0.1"
     HTTP.CacheTime = CACHE_1HOUR
 
 ####################################################################################################
@@ -48,13 +45,11 @@ def MainMenu():
     return oc
 
 ####################################################################################################
-
 def Categories(title):
     oc = ObjectContainer(title2 = title)
-
     page = HTML.ElementFromURL(BASE_BROWSE)
-    for category in page.xpath("//ul[@class = 'categories']/li")[1:-1]:
 
+    for category in page.xpath("//ul[@class = 'categories']/li")[1:-1]:
         title = category.xpath(".//a")[0].get('title')
         url = BASE_URL + category.xpath(".//a")[0].get('href')
         oc.add(DirectoryObject(key = Callback(ListItems, title = title, url = url), title = title))
@@ -62,13 +57,11 @@ def Categories(title):
     return oc
 
 ####################################################################################################
-
 def Channels(title):
     oc = ObjectContainer(title2 = title)
-
     page = HTML.ElementFromURL(BASE_BROWSE)
-    for channel in page.xpath("//li[@class='channels']//li/a"):
 
+    for channel in page.xpath("//li[@class='channels']//li/a"):
         title = channel.get('title')
         url = BASE_URL + channel.get('href')
         oc.add(DirectoryObject(key = Callback(ListItems, title = title, url = url), title = title))
@@ -76,7 +69,6 @@ def Channels(title):
     return oc
 
 ####################################################################################################
-
 def AllFilms(title):
     oc = ObjectContainer(title2 = title)
 
@@ -86,12 +78,12 @@ def AllFilms(title):
     return oc
 
 ####################################################################################################
-
 def ListItems(title, url, replace_parent = False):
     oc = ObjectContainer(view_group = 'InfoList', title2 = title, replace_parent = replace_parent)
 
     # Add all the items currently found on the page.
     page = HTML.ElementFromURL(url)
+
     for item in page.xpath("//ul[contains(@class, 'films-list')]/li"):
         title = item.xpath(".//h3[@class='title']//text()")[0].strip()
         pageUrl = BASE_URL + item.xpath(".//a")[0].get('href')
@@ -124,6 +116,7 @@ def ListItems(title, url, replace_parent = False):
 
     # If we find another page, add it so that the user can further navigate.
     next_page = page.xpath("//div[@class = 'pagination']//li[@class = 'next']")
+
     if len(next_page) > 0:
         next_url = next_page[0].xpath(".//a")[0].get('href')
         oc.add(DirectoryObject(key = Callback(ListItems, title = title, url = BASE_URL + next_url, replace_parent = True), title = "Next..."))
@@ -134,10 +127,9 @@ def ListItems(title, url, replace_parent = False):
     return oc
 
 ####################################################################################################
-
 def GetThumb(url):
     try:
-        image = HTTP.Request(url, cacheTime=CACHE_1WEEK).content
+        image = HTTP.Request(url, cacheTime=CACHE_1MONTH).content
         return DataObject(image, 'image/jpeg')
     except:
         return Redirect(R(ICON))
