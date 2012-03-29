@@ -87,7 +87,7 @@ def ListItems(title, url, replace_parent = False):
     for item in page.xpath("//ul[contains(@class, 'films-list')]/li"):
         title = item.xpath(".//h3[@class='title']//text()")[0].strip()
         pageUrl = BASE_URL + item.xpath(".//a")[0].get('href')
-        thumb = item.xpath(".//img")[0].get('src')
+        thumb = item.xpath(".//img")[0].get('data-original').replace('120x90', '600x337')
         summary = item.xpath(".//div[@class='summary']/p/text()")[0].strip()
 
         date = None
