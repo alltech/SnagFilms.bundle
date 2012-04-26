@@ -1,0 +1,41 @@
+import re
+
+BASE_URL = "http://www.snagfilms.com"
+SEARCH_URL= "http://www.snagfilms.com/films/search?q=%s"
+
+ObjectContainer.art = R('art-default.jpg')
+
+def Search(query):
+
+  # Create a container to hold the results
+  c = ObjectContainer()
+
+  # Compute the URL and download the HTML
+  url = SEARCH_URL % String.Quote(query)
+  search_page = HTML.ElementFromURL(url)
+
+  if len( search_page.xpath('//h1[contains(text(), "no results found")]') ) == 0:
+
+    search_results = search_page.xpath("//ul[contains(@class, 'films-list')]/li")
+
+    for item in search_results:
+      try:
+
+        # Extract the details from the page
+        title = item.xpath(".//h3[@class='title']//text()")[0].strip()
+        pageUrl = BASE_URL + item.xpath(".//a")[0].get('href')
+        thumb = item.xpath(".//img")[0].get('data-original').replace('120x90', '600x337')
+        summary = item.xpath(".//div[@class='summary']/p/text()")[0].strip()
+
+        # Add details of the located video clip
+        c.add(VideoClipObject(
+          url = pageUrl,
+          title = title,
+          summary = summary,
+          thumb = thumb
+        ))
+
+      except:
+        Log.Exception("Exception adding video result")
+
+  return c
